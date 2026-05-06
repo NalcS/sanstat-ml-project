@@ -9,10 +9,10 @@ from scipy.stats import multivariate_normal
 
 #1)
 
-
 alpha = 2
 
 covariance = (1 / alpha) * np.eye(2)
+mu = np.array([0,0])
 
 w_0_distribution = np.arange(-3, 3, 0.1)
 w_1_distribution = np.arange(-3, 3, 0.1)
@@ -22,21 +22,9 @@ w_1_distribution = np.arange(-3, 3, 0.1)
 
 positions = np.dstack((W_0, W_1))
 
-thing_in_between = multivariate_normal(np.array([0,0]), covariance)
+W_prior = multivariate_normal(mu, covariance).pdf(positions)
 
-W_prior = thing_in_between.pdf(positions)
 
-fig, ax = plt.subplots(1, 1)
-
-#Z = np.cos(X / 2) + np.sin(Y / 4)
-#multivariate_normal(mean, covariance)
-#Z = multivariate_normal(W_0, W_1, 0, 1)
-
-#plots contour
-ax.contourf(W_0, W_1, W_prior)
-
-ax.set_title('Contour Plot')
-ax.set_xlabel('w_0')
-ax.set_ylabel('w_1')
-
+#plot contour
+plt.contourf(W_0, W_1, W_prior)
 plt.show()
