@@ -25,10 +25,12 @@ positions = np.dstack((W_0, W_1))
 W_prior = multivariate_normal(mu, covariance).pdf(positions)
 
 
-#plot contour
-#plt.contourf(W_0, W_1, W_prior)
-#plt.title("Contour of prior")
-#plt.show()
+#plot contour for prior
+plt.contourf(W_0, W_1, W_prior)
+plt.title("Contour of prior")
+plt.xlabel('w_0')
+plt.ylabel('w_1')
+plt.show()
 
 
 
@@ -46,7 +48,7 @@ sigma2 = 0.2
 beta = 1 / sigma2
 
 #generate data
-x = np.linspace(-1, 1, 100)
+x = np.linspace(-1, 1, 201)
 t = w0_true + w1_true * x + np.random.normal(0, np.sqrt(sigma2), size=len(x))
 
 
@@ -65,7 +67,7 @@ t = w0_true + w1_true * x + np.random.normal(0, np.sqrt(sigma2), size=len(x))
 
 training_size = 3
 
-sample_index = np.random.choice(len(x), training_size)
+sample_index = np.random.choice(len(x), training_size, replace=False)
 x_samples = x[sample_index]
 t_samples = t[sample_index]
 
@@ -77,8 +79,31 @@ for i in range(training_size):
     probabilities *= rv.pdf(W_pos)
 
 
+#plot contour for likelyhood
 plt.contourf(W_0, W_1, probabilities)
-plt.title("Contour of prior")
+plt.title("Contour of likelihood")
+plt.xlabel('w_0')
+plt.ylabel('w_1')
+plt.show()
+
+
+
+#3)
+#we want to calculate the posterior based on the prior and the likelihood
+
+x_ext = np.column_stack((np.ones(len(x_samples)), x_samples))
+
+#first calculate the mean and covariance using #27 and #28
+posterior_covariance = np.linalg.inv(alpha * np.eye(2) + beta * (x_ext.T @ x_ext))
+
+posterior_mean = beta * ((posterior_covariance @ x_ext.T) @ t_samples)
+
+
+W_posterior = multivariate_normal(posterior_mean, posterior_covariance).pdf(positions)
+
+#plot contour for prior
+plt.contourf(W_0, W_1, W_posterior)
+plt.title("Contour of posterior")
 plt.xlabel('w_0')
 plt.ylabel('w_1')
 plt.show()
