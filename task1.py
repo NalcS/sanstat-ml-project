@@ -140,4 +140,24 @@ test_variance = (1/beta) + np.diag(((x_test_ext @ posterior_covariance) @ x_test
 plt.errorbar(x_test, test_mu, yerr=np.sqrt(test_variance),
              fmt='s', color='black', capsize=5, capthick=1.5,
              label='Predictive mean +/- 1 std')
+#plt.show()
+
+
+#6)
+
+w_ML = np.linalg.inv(x_ext.T @ x_ext) @ x_ext.T @ t_samples
+
+print(w_ML)
+print()
+print(t_samples)
+print()
+print(w_ML)
+print()
+print(x_ext.T)
+
+beta_ML = (len(t_samples)) / np.sum((t_samples - (w_ML @ x_ext.T))**2)
+print(beta_ML)
+
+y = w_ML[0] + w_ML[1] * x
+plt.plot(x, y, '--', 'green')
 plt.show()
