@@ -137,5 +137,7 @@ test_mu = posterior_mean.T @ x_test_ext.T
 
 test_variance = (1/beta) + np.diag(((x_test_ext @ posterior_covariance) @ x_test_ext.T))
 
-plt.errorbar(x_test, test_mu, np.sqrt(test_variance), linestyle='None', marker='^', color='black')
+plt.errorbar(x_test, test_mu, yerr=np.sqrt(test_variance),
+             fmt='s', color='black', capsize=5, capthick=1.5,
+             label='Predictive mean +/- 1 std')
 plt.show()
