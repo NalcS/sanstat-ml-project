@@ -121,9 +121,21 @@ x = np.linspace(-1.5, 1.5, 201)
 for i in range(posterior_sample_amount):
     y = posterior_sample_index[i][0] + posterior_sample_index[i][1] * x
     plt.plot(x, y)
-plt.plot(x_samples, t_samples, 'o', color='blue')
-plt.plot(x_test, t_test, 'o', color='red')
+plt.plot(x_samples, t_samples, 'o', color='blue', label='Training')
+plt.plot(x_test, t_test, 'o', color='red',label='Testing')
 
-plt.plot(x, w0_true + w1_true * x, '--', color='black') #the true model
+plt.plot(x, w0_true + w1_true * x, '--', color='black', label='The True Model') #the true model
+plt.legend()
+#plt.show()
 
+
+#5)
+
+x_test_ext = np.column_stack((np.ones(len(x_test)), x_test))
+
+test_mu = posterior_mean.T @ x_test_ext.T
+
+test_variance = (1/beta) + np.diag(((x_test_ext @ posterior_covariance) @ x_test_ext.T))
+
+plt.errorbar(x_test, test_mu, np.sqrt(test_variance), linestyle='None', marker='^', color='black')
 plt.show()
