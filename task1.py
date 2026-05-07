@@ -107,3 +107,23 @@ plt.title("Contour of posterior")
 plt.xlabel('w_0')
 plt.ylabel('w_1')
 plt.show()
+
+
+
+#4)
+posterior_sample_amount = 5
+posterior_sample_index = multivariate_normal(posterior_mean, posterior_covariance).rvs(posterior_sample_amount)
+
+x_test = np.array([-1.5, -1.4, -1.3, -1.2, -1.1, 1.1, 1.2, 1.3, 1.4, 1.5])
+t_test = w0_true + w1_true * x_test + np.random.normal(0, np.sqrt(sigma2), size=len(x_test))
+
+x = np.linspace(-1.5, 1.5, 201)
+for i in range(posterior_sample_amount):
+    y = posterior_sample_index[i][0] + posterior_sample_index[i][1] * x
+    plt.plot(x, y)
+plt.plot(x_samples, t_samples, 'o', color='blue')
+plt.plot(x_test, t_test, 'o', color='red')
+
+plt.plot(x, w0_true + w1_true * x, '--', color='black') #the true model
+
+plt.show()
