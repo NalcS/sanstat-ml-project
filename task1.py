@@ -9,7 +9,7 @@ from scipy.stats import multivariate_normal, norm
 
 #1)
 
-alpha = 2
+alpha = 10
 
 covariance = (1 / alpha) * np.eye(2)
 mu = np.array([0,0])
@@ -155,3 +155,34 @@ plt.plot(x, y+(np.sqrt(1/beta_ML)), '--', color='blue')
 plt.plot(x, y, '--', color='red')
 plt.plot(x, y-(np.sqrt(1/beta_ML)), '--', color='blue')
 plt.show()
+
+
+#7)
+#Test the exercise for different values of σ2, e.g. 0.1, 0.4 and 0.8, varying α and the
+#increasing number of training samples. How does your model account for data with
+#varying noise levels? What is the effect of noise, the precision of the prior and the
+#number of training samples on the parameter posterior as well as the uncertainty of the
+#model predicitions for test samples?
+
+#   When you increase the value of σ2 you increase the amount of noise which makes 
+#   it more difficult for the model to make certain predictions. The σ2 value is used for the variance
+#   in the likelihood and the covariance for the posterior (beta is used there but it uses σ2). 
+#   When you increase the alpha value you increase the precision for the gaussian prior. 
+#   Which means that you decrease the variance of the initial prior gaussian. 
+#   This will cause the model to claim higher confidence, regardless of whether the prediction is truly better.
+#   Increasing the training samples will increase both the confidence as well as the correctness
+#   of the predictions. This is due to the model getting more data to base the posterior on.
+
+
+
+
+#8)
+#What is the difference between the predictions obtained with the maximum likelihood in
+#comparison with Bayesian approach?
+
+#   The maximum likelihood approach finds a single fixed set of parameters w_ML that best 
+#   explains the training data, then uses it to predict. Bayes on the other hand maintains 
+#   a full probability distribution over w (the posterior) instead of committing to fixed 
+#   parameters. In practice, this means that every ML prediction is a single deterministic 
+#   value: t(x) = w_ML^T x, whereas every Bayesian prediction is a Gaussian distribution: 
+#       p(t|x) = N(μ_N(x), σ²_N(x))
