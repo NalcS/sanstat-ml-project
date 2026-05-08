@@ -102,3 +102,46 @@ plt.show()
 
 #plt.contourf(X_training_1, X_training_2, T_training)
 #plt.show()
+
+#3)
+
+# designs matrix Φ(x) = [1, x1^2, x2^3]
+def design_matrix(x1, x2):
+    return np.column_stack((np.ones(len(x1)), x1**2, x2**3))
+
+phi_training = design_matrix(x1_training, x2_training)
+print(phi_training)
+phi_test = design_matrix(x1_test, x2_test)
+print(phi_test)
+
+# maximum likelihood estimation of w (eq.19) w_ML = (Φ^T Φ)^(-1) Φ^T t
+w_ML = np.linalg.inv(phi_training.T @ phi_training) @ phi_training.T @ t_training
+print(w_ML)
+
+# maximum likelihood estimation of beta (eq.20) beta_ML = (1/N) * sum(ti - wML^T phi(xi))^2
+residuals_training = t_training - (phi_training @ w_ML)
+beta_ML = len(t_training) / np.sum(residuals_training**2)
+print(beta_ML)
+
+print(f"w_ML:    {w_ML}")
+print(f"w_true:  {w_true}")
+print(f"beta_ML: {beta_ML:.4f}  (true beta = {1/sigma2:.4f})")
+
+# prediction for test data t_pred_ML = phi_test @ w_ML
+t_pred_ML = phi_test @ w_ML
+print(t_pred_ML)
+
+MSE_test = np.mean((t_pred_ML - t_test)**2)
+print(f"MSE (Test): {MSE_test:.4f}")
+
+plt.scatter(x1_test, x2_test, c=t_pred_ML, cmap='viridis')
+plt.title(f"Predicted t (ML) for test data (MSE = {MSE_test:.4f})")
+plt.show()
+# plot predicted vs actual test values
+plt.scatter(t_test, t_pred_ML, alpha=0.5)
+plt.plot([t_test.min(), t_test.max()], [t_test.min(), t_test.max()], 'r--', label='Perfect prediction')
+plt.xlabel('Actual t (test)')
+plt.ylabel('Predicted t (ML)')
+plt.title(f"ML predictions vs actual test values (MSE = {MSE_test:.4f})")
+plt.legend()
+plt.show()
