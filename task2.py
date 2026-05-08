@@ -145,3 +145,36 @@ plt.ylabel('Predicted t (ML)')
 plt.title(f"ML predictions vs actual test values (MSE = {MSE_test:.4f})")
 plt.legend()
 plt.show()
+
+#4)
+
+beta = 1/sigma2
+
+# higher alpha means stronger prior 'belief' in w being close to zero, lower alpha means weaker prior
+# higher -> worse MSE but lower predictive variance, lower -> better MSE but higher predictive variance
+alphas = [0.2, 0.8, 2.0] # multiple different values for comparison and experimentation
+ 
+# for-loop to test different alphas simultaneously, does not need to kept but useful //Edvard
+for alpha in alphas:
+    # posterior over w
+    S_N = np.linalg.inv(alpha * np.eye(3) + beta * (phi_training.T @ phi_training))   # Eq. 26
+    m_N = beta * S_N @ phi_training.T @ t_training                                    # Eq. 25
+ 
+    # predictive distribution for test points
+    # mu_N: one mean per test point
+    # sigma2_N: one variance per test point
+    mu_N_test     = phi_test @ m_N                                                    # Eq. 30
+    sigma2_N_test = (1/beta) + np.diag(phi_test @ S_N @ phi_test.T)                   # Eq. 31
+ 
+    MSE_bayes = np.mean((mu_N_test - t_test)**2)
+    print(f"alpha={alpha}: Bayes Test MSE = {MSE_bayes:.4f},  " f"mean predictive variance = {np.mean(sigma2_N_test):.4f}")
+ 
+    # plot predicted vs actual
+    plt.scatter(t_test, mu_N_test, alpha=0.5, label=f'alpha={alpha}')
+ 
+plt.plot([t_test.min(), t_test.max()], [t_test.min(), t_test.max()], 'r--', label='Perfect prediction')
+plt.xlabel('Actual t (test)')
+plt.ylabel('Predicted t (Bayesian mean)')
+plt.title("Bayesian predictions vs actual test values (all alphas)")
+plt.legend()
+plt.show()
