@@ -1,309 +1,324 @@
-# Sigma vs alpha who will win
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.stats import multivariate_normal, norm
 
-using System;
-using System.IO;
-using System.Threading.Tasks;
-using GLTFast;
-using UnityEngine;
+from matplotlib import cbook, cm
+from matplotlib.colors import LightSource
+#1)
 
-/// <summary>
-/// Loads glTF/glb models from a local file path at runtime and
-/// instantiates them under the calibration origin.
-/// </summary>
-public class RuntimeModelLoader : MonoBehaviour
-{
-    public static RuntimeModelLoader Instance { get; private set; }
+#ti = wTφ(xi) + \epsilon = w0 + w1x1i2 + w2x2i3 + \epsilon , where \epsilon ∼ N (0, σ2)
 
-    private GameObject _currentRoot;
-    private Transform _currentModelRoot;
-    private Transform _currentWorkspace;
+sigma2 = 0.3
 
-    [Header("Placement")]
-    [Tooltip("The workspace bounds the model should appear inside. Assign the workspace object in your scene if not using runtime placement.")]
-    [SerializeField] private Transform workspaceTransform;
+w_true = np.array([0, 2.5, -0.5])
 
-    [Header("Wireframe Override")]
-    [Tooltip("If assigned, all loaded meshes will be rendered with this wireframe effect instead of their original materials (expects an Azerilo wireframe material).")]
-    public Material overrideMaterial;
+#creating the x matrix with the x values and the x_ext matrix with 1 also
+#   ones, x1 repeated m times x2 rep m times... xn rep m times, y1...ym repeated n times
+x_in = np.linspace(-1, 1, 41)
 
-    [Header("Ray Override")]
-    [Tooltip("If assigned, all loaded meshes will be rendered with this wireframe effect instead of their original materials (expects an Azerilo wireframe material).")]
-    public Material overrideRay;
+#create 2D grid
+[X_1, X_2] = np.meshgrid(x_in, x_in)
 
-    private void Awake()
-    {
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
+#   tried to make it 1 matrix but was better with grid for the plotting, perhaps useful for later tasks though
+#col2 = np.repeat(x_in, 41)
+#col3 = np.tile(x_in, 41)
+#col1 = np.ones(len(col3))
+#x =  np.column_stack((col2, col3))
+#x_ext = np.column_stack((col1, col2, col3))
 
-        Instance = this;
-        DontDestroyOnLoad(gameObject);
-    }
+#create t:
+t_noise = np.random.normal(0, np.sqrt(sigma2), size=X_1.shape)
+T = w_true[0] + (w_true[1] * (X_1**2)) + (w_true[2] * (X_2**3)) + t_noise
+T_perfect = w_true[0] + (w_true[1] * (X_1**2)) + (w_true[2] * (X_2**3))
+t_perfect = T_perfect.flatten()
 
-    /// <summary>
-    /// Fire-and-forget wrapper so you can call from UI without dealing with Tasks.
-    /// </summary>
-    public async void LoadFromPath(string path)
-    {
-        await LoadFromPathAsync(path);
-    }
+plt.contourf(X_1, X_2, T)
+plt.show()
 
-    /// <summary>
-    /// Main entry point: load a model from a local file path.
-    /// </summary>
-    public async Task LoadFromPathAsync(string path)
-    {
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            Debug.LogWarning("[RuntimeModelLoader] LoadFromPathAsync called with empty path.");
-            return;
-        }
 
-        await LoadFromFileAsync(path);
-    }
 
-    /// <summary>
-    /// Load a test model from Settings or Resources. If none found, falls back to a simple sphere.
-    /// </summary>
-    public void LoadTestModel(Settings settings)
-    {
-        GameObject prefab = null;
-        if (settings != null)
-        {
-            prefab = settings.testModelPrefab;
-            if (prefab == null && !string.IsNullOrWhiteSpace(settings.testModelResourcePath))
-            {
-                prefab = Resources.Load<GameObject>(settings.testModelResourcePath);
-            }
-        }
+#2)
 
-        if (prefab != null)
-        {
-            LoadFromPrefab(prefab);
-            return;
-        }
+x1_flat = X_1.flatten()
+x2_flat = X_2.flatten()
+t_flat = T.flatten()
 
-        Debug.LogWarning("[RuntimeModelLoader] No test model prefab found. Creating a simple sphere.");
-        LoadFromPrimitive(PrimitiveType.Sphere);
-    }
+test_condition = (np.abs(x1_flat) > 0.3) | (np.abs(x2_flat) > 0.3) 
+training_condition = ~test_condition
 
-    private void LoadFromPrefab(GameObject prefab)
-    {
-        if (prefab == null)
-            return;
+#print(test_condition)
+#print(training_condition)
 
-        UnloadCurrentModel();
+x1_test = x1_flat[test_condition]
+x2_test = x2_flat[test_condition]
+t_test = t_flat[test_condition]
+t_perfect = t_perfect[test_condition]
 
-        var root = new GameObject("RuntimeModel");
-        var instance = Instantiate(prefab, root.transform);
-        instance.transform.localPosition = Vector3.zero;
-        instance.transform.localRotation = Quaternion.identity;
-        instance.transform.localScale = Vector3.one;
+#add extra noise to t_test
 
-        CalibrationOriginUtility.AttachToOrigin(root.transform, worldPositionStays: true);
+extra_noise = np.random.normal(0, 0.25*np.sqrt(sigma2), size=t_test.shape)
 
-            _currentModelRoot = root.transform;
-            if (!PositionModelInsideWorkspace(root.transform))
-            {
-                Debug.LogWarning("[RuntimeModelLoader] No workspace/settings found. Placing model in front of camera instead.");
-                PlaceModelInFrontOfCamera(root.transform);
-            }
+t_test = t_test + extra_noise
 
-        if (overrideRay != null)
-        {
-            // Maybe if statement so it's not always on?
-            RuntimeModelVisualsUtility.ApplyRayHelperEffect(root.transform, overrideRay);
+#training sample
+x1_training = x1_flat[training_condition]
+x2_training = x2_flat[training_condition]
+t_training = t_flat[training_condition]
 
-        }
-        if (overrideMaterial != null)
-        {
 
-            RuntimeModelVisualsUtility.ApplyWireframeEffect(root.transform, overrideMaterial);
+print(x1_test)
+print()
+print(x2_test)
+print()
+print(t_test)
+#plot
+plt.scatter(x1_test, x2_test, c=t_test, cmap='viridis', label='Test Data')
+plt.show()
 
-        }
+plt.scatter(x1_training, x2_training, c=t_training, cmap='viridis', label='Training Data')
+plt.show()
 
-            _currentRoot = root;
-        Debug.Log("[RuntimeModelLoader] Loaded test model prefab.");
-    }
 
-    private void LoadFromPrimitive(PrimitiveType primitiveType)
-    {
-        UnloadCurrentModel();
 
-        var root = new GameObject("RuntimeModel");
-        var primitive = GameObject.CreatePrimitive(primitiveType);
-        primitive.transform.SetParent(root.transform, false);
-        primitive.transform.localPosition = Vector3.zero;
-        primitive.transform.localRotation = Quaternion.identity;
-        primitive.transform.localScale = Vector3.one;
 
-        CalibrationOriginUtility.AttachToOrigin(root.transform, worldPositionStays: true);
+#sampling
+#   |x_1|>0.3 or |x_2|>0.3
+#       for test data
+#   rest is for training
 
-        _currentModelRoot = root.transform;
-        if (!PositionModelInsideWorkspace(root.transform))
-        {
-            Debug.LogWarning("[RuntimeModelLoader] No reference point for model to load.");
-            Destroy(root);
-            return;
-        }
+#x_test_in = np.array(list(filter(lambda x: np.abs(x) > 0.3000001, x_in))) #has to check 0.3000001 because float bs
 
-        if (overrideRay != null)
-        {
-            // Maybe if statement so it's not always on?
-            RuntimeModelVisualsUtility.ApplyRayHelperEffect(root.transform, overrideRay);
+#[X_test_1, X_test_2] = np.meshgrid(x_test_in, x_test_in)
 
-        }
-        if (overrideMaterial != null)
-        {
+#t_test_noise = 1.25 * np.random.normal(0, np.sqrt(sigma2), size=X_test_1.shape) #extra noise
+#T_test = w_true[0] + (w_true[1] * (X_test_1**2)) + (w_true[2] * (X_test_2**3)) + t_test_noise
 
-            RuntimeModelVisualsUtility.ApplyWireframeEffect(root.transform, overrideMaterial);
+#print(T_test)
 
-        }
+#plt.contourf(X_test_1, X_test_2, T_test)
+#plt.show()
 
-        _currentRoot = root;
-        Debug.Log("[RuntimeModelLoader] Loaded primitive sphere as test model.");
-    }
 
-    /// <summary>
-    /// Unloads the currently instantiated runtime model, if any.
-    /// </summary>
-    public void UnloadCurrentModel()
-    {
-        if (_currentRoot != null)
-        {
-            Destroy(_currentRoot);
-            _currentRoot = null;
-        }
-    }
+#x_training_in = np.array(list(filter(lambda x: np.abs(x) <= 0.3, x_in)))
 
-    private async Task LoadFromFileAsync(string path)
-    {
-        if (string.IsNullOrEmpty(path))
-        {
-            Debug.LogError("[RuntimeModelLoader] LoadFromFileAsync called with null/empty path.");
-            return;
-        }
+#[X_training_1, X_training_2] = np.meshgrid(x_training_in, x_training_in)
 
-        try
-        {
-            if (!File.Exists(path))
-            {
-                Debug.LogError($"[RuntimeModelLoader] File does not exist: {path}");
-                return;
-            }
+#t_training_noise = np.random.normal(0, np.sqrt(sigma2), size=X_training_1.shape) 
+#T_training = w_true[0] + (w_true[1] * (X_training_1**2)) + (w_true[2] * (X_training_2**3)) + t_training_noise
 
-            UnloadCurrentModel();
+#plt.contourf(X_training_1, X_training_2, T_training)
+#plt.show()
 
-            var gltf = new GltfImport();
+#3)
 
-            // glTFast expects a URI; prefix local files with file://
-            string uri = new Uri(path).AbsoluteUri;
-            Debug.Log($"[RuntimeModelLoader] Loading glTF from URI: {uri}");
+# designs matrix Φ(x) = [1, x1^2, x2^3]
+def design_matrix(x1, x2):
+    return np.column_stack((np.ones(len(x1)), x1**2, x2**3))
 
-            bool loaded = await gltf.Load(uri);
-            if (!loaded)
-            {
-                Debug.LogError($"[RuntimeModelLoader] Failed to load glTF from '{uri}'.");
-                return;
-            }
+phi_training = design_matrix(x1_training, x2_training)
+print(phi_training)
+phi_test = design_matrix(x1_test, x2_test)
+print(phi_test)
 
-            var root = new GameObject("RuntimeModel");
+# maximum likelihood estimation of w (eq.19) w_ML = (Φ^T Φ)^(-1) Φ^T t
+w_ML = np.linalg.inv(phi_training.T @ phi_training) @ phi_training.T @ t_training
+print(w_ML)
 
-            bool instantiated = await gltf.InstantiateMainSceneAsync(root.transform);
-            if (!instantiated)
-            {
-                Debug.LogError("[RuntimeModelLoader] Failed to instantiate main scene from glTF.");
-                Destroy(root);
-                return;
-            }
+# maximum likelihood estimation of beta (eq.20) beta_ML = (1/N) * sum(ti - wML^T phi(xi))^2
+residuals_training = t_training - (phi_training @ w_ML)
+beta_ML = len(t_training) / np.sum(residuals_training**2)
+print(beta_ML)
 
-        // Attach to calibration origin so model lives in the calibrated world space.
-        CalibrationOriginUtility.AttachToOrigin(root.transform, worldPositionStays: true);
+print(f"w_ML:    {w_ML}")
+print(f"w_true:  {w_true}")
+print(f"beta_ML: {beta_ML:.4f}  (true beta = {1/sigma2:.4f})")
 
-        // Place the model inside the workspace bounds (if one exists) using the offset from Settings.
-        // If we have no valid reference workspace, do NOT keep the model loaded.
-        _currentModelRoot = root.transform;
-        if (!PositionModelInsideWorkspace(root.transform))
-        {
-            Debug.LogWarning("[RuntimeModelLoader] No reference point for model to load.");
-            Destroy(root);
-            return;
-        }
+# prediction for test data t_pred_ML = phi_test @ w_ML
+t_pred_ML = phi_test @ w_ML
+print(t_pred_ML)
 
-            // Optionally override visuals so we ignore original textures and use a wireframe effect.
-            if (overrideRay != null)
-            {
-                // Maybe if statement so it's not always on?
-                RuntimeModelVisualsUtility.ApplyRayHelperEffect(root.transform, overrideRay);
+MSE_test = np.mean((t_pred_ML - t_test)**2)
+MSE_ML = t_pred_ML - t_test
+print(f"MSE (Test): {MSE_test:.4f}")
 
-            }
-            if (overrideMaterial != null)
-            {
+plt.scatter(x1_test, x2_test, c=t_pred_ML, cmap='viridis')
+plt.title(f"Predicted t (ML) for test data (MSE = {MSE_test:.4f})")
+plt.show()
+# plot predicted vs actual test values
+plt.scatter(t_test, t_pred_ML, alpha=0.5)
+plt.plot([t_test.min(), t_test.max()], [t_test.min(), t_test.max()], 'r--', label='Perfect prediction')
+plt.xlabel('Actual t (test)')
+plt.ylabel('Predicted t (ML)')
+plt.title(f"ML predictions vs actual test values (MSE = {MSE_test:.4f})")
+plt.legend()
+plt.show()
 
-                RuntimeModelVisualsUtility.ApplyWireframeEffect(root.transform, overrideMaterial);
+#4)
 
-            }
+MSE_bayes_arrays = []
+MSE_bayes_values = []
+posteriors = []
+beta = 1/sigma2
 
-            _currentRoot = root;
+# higher alpha means stronger prior 'belief' in w being close to zero, lower alpha means weaker prior
+# higher -> worse MSE but lower predictive variance, lower -> better MSE but higher predictive variance
+alphas = [0.1, 0.4, 0.8] # multiple different values for comparison and experimentation
+ 
+# for-loop to test different alphas simultaneously, does not need to kept but useful //Edvard
+for alpha in alphas:
+    # posterior over w
+    S_N = np.linalg.inv(alpha * np.eye(3) + beta * (phi_training.T @ phi_training))   # Eq. 26
+    m_N = beta * S_N @ phi_training.T @ t_training                                    # Eq. 25
+    posteriors.append([m_N, S_N])
+ 
+    # predictive distribution for test points
+    # mu_N: one mean per test point
+    # sigma2_N: one variance per test point
+    mu_N_test     = phi_test @ m_N                                                    # Eq. 30
+    sigma2_N_test = (1/beta) + np.diag(phi_test @ S_N @ phi_test.T)                   # Eq. 31
+    
+ 
+    MSE_bayes = np.mean((mu_N_test - t_test)**2)
+    MSE_bayes_arrays.append(mu_N_test - t_test)
+    MSE_bayes_values.append(MSE_bayes)
+    print(f"alpha={alpha}: Bayes Test MSE = {MSE_bayes:.4f},  " f"mean predictive variance = {np.mean(sigma2_N_test):.4f}")
+ 
+    # plot predicted vs actual
+    plt.scatter(t_perfect, mu_N_test, alpha=0.5, label=f'alpha={alpha}')
+ 
+plt.plot([t_test.min(), t_test.max()], [t_test.min(), t_test.max()], 'r--', label='Perfect prediction')
+plt.xlabel('Actual t (test)')
+plt.ylabel('Predicted t (Bayesian mean)')
+plt.title("Bayesian predictions vs actual test values (all alphas)")
+plt.legend()
+plt.show()
 
-            Debug.Log($"[RuntimeModelLoader] Loaded model from '{path}', positioned inside workspace, and instantiated under calibration origin.");
-        }
-        catch (Exception e)
-        {
-            Debug.LogError($"[RuntimeModelLoader] Exception while loading '{path}': {e}");
-        }
-    }
+#5)
 
-    private static void PlaceModelInFrontOfCamera(Transform modelRoot, float distance = 1.2f)
-    {
-        if (modelRoot == null)
-            return;
+colored_x = np.array([-0.1, 0, 0.1])
+colored_y = np.zeros(3)
+colored_c = np.array([-1, 0, 1])
+#print(len(MSE_ML)) # Det blir 1537 = 41^2 - 12^2
+fig, ax = plt.subplots()
 
-        Camera cam = Camera.main;
-        if (cam == null)
-            cam = FindObjectOfType<Camera>();
+plt.scatter(x1_test, x2_test, c=MSE_ML, cmap='coolwarm')
+plt.title(f"ML error for test data (MSE = {MSE_test:.4f})")
+plt.xlabel('x1')
+plt.ylabel('x2')
+ax.annotate("Colors for -1, 0, 1", xy=(-0.275, 0.1))
+plt.scatter(colored_x, colored_y, c=colored_c, cmap='coolwarm')
+plt.show()
 
-        if (cam == null)
-        {
-            modelRoot.position = Vector3.zero;
-            modelRoot.rotation = Quaternion.identity;
-            return;
-        }
+fig, ax = plt.subplots()
+plt.scatter(x1_test, x2_test, c=MSE_bayes_arrays[0], cmap='coolwarm')
+plt.title(f"Bayesian error for a = {alphas[0]} test data (MSE = {MSE_bayes_values[0]:.4f})")
+plt.xlabel('x1')
+plt.ylabel('x2')
+ax.annotate("Colors for -1, 0, 1", xy=(-0.275, 0.1))
+plt.scatter(colored_x, colored_y, c=colored_c, cmap='coolwarm')
+plt.show()
 
-        modelRoot.position = cam.transform.position + cam.transform.forward * distance;
-        modelRoot.rotation = Quaternion.LookRotation(cam.transform.forward, Vector3.up);
-    }
+fig, ax = plt.subplots()
+plt.scatter(x1_test, x2_test, c=MSE_bayes_arrays[1], cmap='coolwarm')
+plt.title(f"Bayesian error for a = {alphas[1]} test data (MSE = {MSE_bayes_values[1]:.4f})")
+plt.xlabel('x1')
+plt.ylabel('x2')
+ax.annotate("Colors for -1, 0, 1", xy=(-0.275, 0.1))
+plt.scatter(colored_x, colored_y, c=colored_c, cmap='coolwarm')
+plt.show()
 
-    private void LateUpdate()
-    {
-        // Continuously keep the model aligned with the workspace and offset/scale
-        // from Settings so changes take effect in real time, even after placement.
-        if (_currentModelRoot != null && _currentWorkspace != null)
-        {
-            var settings = SettingsManager.Instance != null ? SettingsManager.Instance.settings : null;
-            RuntimeModelPositionUtility.RepositionModelRelativeToWorkspace(_currentModelRoot, _currentWorkspace, settings);
-        }
-    }
+fig, ax = plt.subplots()
+plt.scatter(x1_test, x2_test, c=MSE_bayes_arrays[2], cmap='coolwarm')
+plt.title(f"Bayesian error for a = {alphas[2]} test data (MSE = {MSE_bayes_values[2]:.4f})")
+plt.xlabel('x1')
+plt.ylabel('x2')
+ax.annotate("Colors for -1, 0, 1", xy=(-0.275, 0.1))
+plt.scatter(colored_x, colored_y, c=colored_c, cmap='coolwarm')
+plt.show()
 
-    /// <summary>
-    /// Positions the loaded model so it sits inside the workspace bounds.
-    /// Delegates the actual math to RuntimeModelPositionUtility.
-    /// </summary>
-    private bool PositionModelInsideWorkspace(Transform modelRoot)
-    {
-        if (modelRoot == null)
-            return false;
 
-        var settings = SettingsManager.Instance != null ? SettingsManager.Instance.settings : Settings.GetActive();
-        if (settings == null)
-            return false;
+#6)
+r = [i/100 for i  in range(10, 200, 5)]
 
-        if (!RuntimeModelPositionUtility.TryPositionModelInsideWorkspace(modelRoot, workspaceTransform, out var resolvedWorkspace, settings))
-            return false;
+for nmbr_training in [9, 21, 81]:
+    sigma_bayes = []
+    for sigma2 in r:
+        x_in = np.linspace(-1, 1, nmbr_training)
 
-        _currentWorkspace = resolvedWorkspace;
-        return true;
-    }
-}
+        #create 2D grid
+        [X_1, X_2] = np.meshgrid(x_in, x_in)
+        t_noise = np.random.normal(0, np.sqrt(sigma2), size=X_1.shape)
+        
+        t_noise = np.random.normal(0, np.sqrt(sigma2), size=X_1.shape)
+        T = w_true[0] + (w_true[1] * (X_1**2)) + (w_true[2] * (X_2**3)) + t_noise
+        T_perfect = w_true[0] + (w_true[1] * (X_1**2)) + (w_true[2] * (X_2**3))
+
+        t_flat = T.flatten()
+        t_perfect = T_perfect.flatten()
+        x1_flat = X_1.flatten()
+        x2_flat = X_2.flatten()
+
+        test_condition = (np.abs(x1_flat) > 0.3) | (np.abs(x2_flat) > 0.3) 
+        training_condition = ~test_condition
+        
+        x1_training = x1_flat[training_condition]
+        x2_training = x2_flat[training_condition]
+        x1_test = x1_flat[test_condition]
+        x2_test = x2_flat[test_condition]
+        t_training = t_flat[training_condition]
+        t_test = t_flat[test_condition]
+        tp_test = t_perfect[test_condition]
+        t_perfect = t_perfect[training_condition]
+        
+
+        phi_training = design_matrix(x1_training, x2_training)
+        phi_test = design_matrix(x1_test, x2_test)
+
+        w_ML = np.linalg.inv(phi_training.T @ phi_training) @ phi_training.T @ t_training
+        print("WeightsML:=", w_ML)
+        t_pred_ML = phi_test @ w_ML
+        #if nmbr_training!= 2 :
+            #plt.scatter(t_perfect, t_pred_ML, alpha=0.3, label=f'ML')
+
+        MSE_bayes = []
+        for alpha in r:
+            S_N = np.linalg.inv(alpha * np.eye(3) + (1/sigma2) * (phi_training.T @ phi_training))   # Eq. 26
+            m_N = (1/sigma2) * S_N @ phi_training.T @ t_training      
+        
+            mu_N_test     = phi_test @ m_N
+            sigma2_N_test = (sigma2) + np.diag(phi_test @ S_N @ phi_test.T) 
+            #print("Weights=", m_N)
+            
+
+            MSE_bayes.append(np.mean((mu_N_test - t_test)**2))
+            #print(f"sigma2={sigma2}:, sample={nmbr_training} Bayes Test MSE = {MSE_bayes:.4f},  " f"mean predictive variance = {np.mean(sigma2_N_test):.4f}")
+            #plt.scatter(t_perfect, mu_N_test, alpha=0.3, label=f'alpha={alpha}')
+        
+        sigma_bayes.append(MSE_bayes)
+
+
+        
+        #plt.plot([t_perfect.min(), t_perfect.max()], [t_perfect.min(), t_perfect.max()], 'r--', label='Perfect prediction')
+        #plt.legend()
+        #plt.show()
+
+    sigma_bayes = np.array(sigma_bayes)
+    a, s = np.meshgrid(r, r)
+    print(a.shape)
+    print(sigma_bayes.shape)
+    fig, ax = plt.subplots(subplot_kw=dict(projection='3d'))
+
+    ls = LightSource(270, 45)
+    # To use a custom hillshading mode, override the built-in shading and pass
+    # in the rgb colors of the shaded surface calculated from "shade".
+    rgb = ls.shade(sigma_bayes, cmap=cm.gist_earth, vert_exag=0.1, blend_mode='soft')
+    surf = ax.plot_surface(a, s, sigma_bayes, rstride=1, cstride=1, facecolors=rgb,
+                        linewidth=0, antialiased=False, shade=False)
+
+    plt.show()
+
+
+
+
+
+    
