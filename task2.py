@@ -132,6 +132,7 @@ t_pred_ML = phi_test @ w_ML
 print(t_pred_ML)
 
 MSE_test = np.mean((t_pred_ML - t_test)**2)
+MSE_ML = t_pred_ML - t_test
 print(f"MSE (Test): {MSE_test:.4f}")
 
 plt.scatter(x1_test, x2_test, c=t_pred_ML, cmap='viridis')
@@ -148,6 +149,9 @@ plt.show()
 
 #4)
 
+MSE_bayes_arrays = []
+MSE_bayes_values = []
+posteriors = []
 beta = 1/sigma2
 
 # higher alpha means stronger prior 'belief' in w being close to zero, lower alpha means weaker prior
@@ -159,6 +163,7 @@ for alpha in alphas:
     # posterior over w
     S_N = np.linalg.inv(alpha * np.eye(3) + beta * (phi_training.T @ phi_training))   # Eq. 26
     m_N = beta * S_N @ phi_training.T @ t_training                                    # Eq. 25
+    posteriors.append([m_N, S_N])
  
     # predictive distribution for test points
     # mu_N: one mean per test point
@@ -167,6 +172,8 @@ for alpha in alphas:
     sigma2_N_test = (1/beta) + np.diag(phi_test @ S_N @ phi_test.T)                   # Eq. 31
  
     MSE_bayes = np.mean((mu_N_test - t_test)**2)
+    MSE_bayes_arrays.append(mu_N_test - t_test)
+    MSE_bayes_values.append(MSE_bayes)
     print(f"alpha={alpha}: Bayes Test MSE = {MSE_bayes:.4f},  " f"mean predictive variance = {np.mean(sigma2_N_test):.4f}")
  
     # plot predicted vs actual
@@ -178,3 +185,54 @@ plt.ylabel('Predicted t (Bayesian mean)')
 plt.title("Bayesian predictions vs actual test values (all alphas)")
 plt.legend()
 plt.show()
+
+#5)
+
+colored_x = np.array([-0.1, 0, 0.1])
+colored_y = np.zeros(3)
+colored_c = np.array([-1, 0, 1])
+#print(len(MSE_ML)) # Det blir 1537 = 41^2 - 12^2
+fig, ax = plt.subplots()
+
+plt.scatter(x1_test, x2_test, c=MSE_ML, cmap='coolwarm')
+plt.title(f"ML error for test data (MSE = {MSE_test:.4f})")
+plt.xlabel('x1')
+plt.ylabel('x2')
+ax.annotate("Colors for -1, 0, 1", xy=(-0.275, 0.1))
+plt.scatter(colored_x, colored_y, c=colored_c, cmap='coolwarm')
+plt.show()
+
+fig, ax = plt.subplots()
+plt.scatter(x1_test, x2_test, c=MSE_bayes_arrays[0], cmap='coolwarm')
+plt.title(f"Bayesian error for a = {alphas[0]} test data (MSE = {MSE_bayes_values[0]:.4f})")
+plt.xlabel('x1')
+plt.ylabel('x2')
+ax.annotate("Colors for -1, 0, 1", xy=(-0.275, 0.1))
+plt.scatter(colored_x, colored_y, c=colored_c, cmap='coolwarm')
+plt.show()
+
+fig, ax = plt.subplots()
+plt.scatter(x1_test, x2_test, c=MSE_bayes_arrays[1], cmap='coolwarm')
+plt.title(f"Bayesian error for a = {alphas[1]} test data (MSE = {MSE_bayes_values[1]:.4f})")
+plt.xlabel('x1')
+plt.ylabel('x2')
+ax.annotate("Colors for -1, 0, 1", xy=(-0.275, 0.1))
+plt.scatter(colored_x, colored_y, c=colored_c, cmap='coolwarm')
+plt.show()
+
+fig, ax = plt.subplots()
+plt.scatter(x1_test, x2_test, c=MSE_bayes_arrays[2], cmap='coolwarm')
+plt.title(f"Bayesian error for a = {alphas[2]} test data (MSE = {MSE_bayes_values[2]:.4f})")
+plt.xlabel('x1')
+plt.ylabel('x2')
+ax.annotate("Colors for -1, 0, 1", xy=(-0.275, 0.1))
+plt.scatter(colored_x, colored_y, c=colored_c, cmap='coolwarm')
+plt.show()
+
+
+#6)
+
+for posterior_mean, posterior_covariance in posteriors:
+    posterior_sample_amount = 5
+    posterior_sample_index = multivariate_normal(posterior_mean, posterior_covariance).rvs(posterior_sample_amount)
+    
