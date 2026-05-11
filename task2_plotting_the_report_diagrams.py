@@ -31,6 +31,10 @@ T_perfect = w_true[0] + (w_true[1] * (X_1**2)) + (w_true[2] * (X_2**3))
 t_perfect = T_perfect.flatten()
 
 plt.contourf(X_1, X_2, T)
+plt.title("W*ϕ(x) with the true values of W")
+plt.xlabel("x1")
+plt.ylabel("x2")
+plt.colorbar()
 plt.show()
 
 
@@ -41,7 +45,7 @@ x1_flat = X_1.flatten()
 x2_flat = X_2.flatten()
 t_flat = T.flatten()
 
-test_condition = (np.abs(x1_flat) > 0.3) | (np.abs(x2_flat) > 0.3) 
+test_condition = (np.abs(x1_flat) > 0.300001) | (np.abs(x2_flat) > 0.300001) 
 training_condition = ~test_condition
 
 #print(test_condition)
@@ -140,7 +144,10 @@ MSE_ML = t_pred_ML - t_test
 print(f"MSE (Test): {MSE_test:.4f}")
 
 plt.scatter(x1_test, x2_test, c=t_pred_ML, cmap='viridis')
-plt.title(f"Predicted t (ML) for test data (MSE = {MSE_test:.4f})")
+plt.title(f"Predicted t for test data (MSE = {MSE_test:.4f}) (ML)")
+plt.xlabel("x1")
+plt.ylabel("x2")
+plt.colorbar()
 plt.show()
 # plot predicted vs actual test values
 plt.scatter(t_test, t_pred_ML, alpha=0.5)
@@ -158,12 +165,45 @@ MSE_bayes_values = []
 posteriors = []
 beta = 1/sigma2
 
+
+
+#Baseline bayesian graph
+alpha = 0.4
+# posterior over w
+S_N = np.linalg.inv(alpha * np.eye(3) + beta * (phi_training.T @ phi_training))   # Eq. 26
+m_N = beta * S_N @ phi_training.T @ t_training                                    # Eq. 25
+posteriors.append([m_N, S_N])
+
+# predictive distribution for test points
+# mu_N: one mean per test point
+# sigma2_N: one variance per test point
+mu_N_test     = phi_test @ m_N                                                    # Eq. 30
+sigma2_N_test = (1/beta) + np.diag(phi_test @ S_N @ phi_test.T)                   # Eq. 31
+
+
+MSE_bayes = np.mean((mu_N_test - t_test)**2)
+MSE_bayes_arrays.append(mu_N_test - t_test)
+MSE_bayes_values.append(MSE_bayes)
+print(f"alpha={alpha}: Bayes Test MSE = {MSE_bayes:.4f},  " f"mean predictive variance = {np.mean(sigma2_N_test):.4f}")
+print("Bayesian Mean=")
+print(m_N)
+
+#bayesian prediction baseline
+plt.scatter(x1_test, x2_test, c=mu_N_test, cmap='viridis')
+plt.title(f"Predicted t for test data (MSE = {MSE_bayes:.4f}) (Bayesian)")
+plt.xlabel("x1")
+plt.ylabel("x2")
+plt.colorbar()
+plt.show()
+
+
+
 # higher alpha means stronger prior 'belief' in w being close to zero, lower alpha means weaker prior
 # higher -> worse MSE but lower predictive variance, lower -> better MSE but higher predictive variance
 alphas = [0.1, 0.4, 0.8] # multiple different values for comparison and experimentation
  
 # for-loop to test different alphas simultaneously, does not need to kept but useful //Edvard
-for alpha in alphas:
+"""for alpha in alphas:
     # posterior over w
     S_N = np.linalg.inv(alpha * np.eye(3) + beta * (phi_training.T @ phi_training))   # Eq. 26
     m_N = beta * S_N @ phi_training.T @ t_training                                    # Eq. 25
@@ -233,11 +273,11 @@ plt.ylabel('x2')
 ax.annotate("Colors for -1, 0, 1", xy=(-0.275, 0.1))
 plt.scatter(colored_x, colored_y, c=colored_c, cmap='coolwarm')
 plt.show()
-
+"""
 
 #6)
 
-for nmbr_training in [4, 9, 41]:
+"""for nmbr_training in [4, 9, 41]:
     for sigma2 in [0.1, 0.4, 0.8]:
         x_in = np.linspace(-0.3, 0.3, nmbr_training)
 
@@ -263,9 +303,8 @@ for nmbr_training in [4, 9, 41]:
         x2_test = x2_flat[test_condition]
         t_training = t_flat[training_condition]
         t_test = t_flat[test_condition]
-        tp_test  = t_perfect[test_condition]
         t_perfect = t_perfect[training_condition]
-        
+        tp_test  = t_perfect[test_condition]
 
         phi_training = design_matrix(x1_training, x2_training)
         phi_test = design_matrix(x1_test, x2_test)
@@ -293,7 +332,7 @@ for nmbr_training in [4, 9, 41]:
         plt.plot([t_perfect.min(), t_perfect.max()], [t_perfect.min(), t_perfect.max()], 'r--', label='Perfect prediction')
         plt.legend()
         plt.show()
-
+"""
 
 
 
