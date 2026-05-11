@@ -263,8 +263,9 @@ for nmbr_training in [4, 9, 41]:
         x2_test = x2_flat[test_condition]
         t_training = t_flat[training_condition]
         t_test = t_flat[test_condition]
-        t_perfect = t_perfect[training_condition]
         tp_test  = t_perfect[test_condition]
+        t_perfect = t_perfect[training_condition]
+        
 
         phi_training = design_matrix(x1_training, x2_training)
         phi_test = design_matrix(x1_test, x2_test)
