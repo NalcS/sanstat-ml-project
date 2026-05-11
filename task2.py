@@ -237,8 +237,8 @@ plt.show()
 
 #6)
 
-for sigma2 in [0.1, 0.2, 0.4]:
-    for nmbr_training in [4, 9, 41]:
+for nmbr_training in [4, 9, 41]:
+    for sigma2 in [0.1, 0.4, 0.8]:
         x_in = np.linspace(-0.3, 0.3, nmbr_training)
 
         #create 2D grid
@@ -259,23 +259,30 @@ for sigma2 in [0.1, 0.2, 0.4]:
         
         x1_training = x1_flat[training_condition]
         x2_training = x2_flat[training_condition]
+        x1_test = x1_flat[test_condition]
+        x2_test = x2_flat[test_condition]
         t_training = t_flat[training_condition]
+        t_test = t_flat[test_condition]
         t_perfect = t_perfect[training_condition]
+        tp_test  = t_perfect[test_condition]
 
         phi_training = design_matrix(x1_training, x2_training)
+        phi_test = design_matrix(x1_test, x2_test)
 
         w_ML = np.linalg.inv(phi_training.T @ phi_training) @ phi_training.T @ t_training
         print("WeightsML:=", w_ML)
-        t_pred_ML = phi_training @ w_ML
-        if nmbr_training!= 2 :
-            plt.scatter(t_perfect, t_pred_ML, alpha=0.3, label=f'ML')
-        for i, alpha in enumerate(alphas):
+        t_pred_ML = phi_test @ w_ML
+        #if nmbr_training!= 2 :
+            #plt.scatter(t_perfect, t_pred_ML, alpha=0.3, label=f'ML')
+
+        MSE_bayes = []
+        for alpha in [0.1, 0.4, 0.8]:
             S_N = np.linalg.inv(alpha * np.eye(3) + (1/sigma2) * (phi_training.T @ phi_training))   # Eq. 26
             m_N = (1/sigma2) * S_N @ phi_training.T @ t_training      
         
-            mu_N_test     = phi_training @ m_N
-            sigma2_N_test = (sigma2) + np.diag(phi_training @ S_N @ phi_training.T) 
-            print("Weights=", m_N)
+            mu_N_test     = phi_test @ m_N
+            sigma2_N_test = (sigma2) + np.diag(phi_test @ S_N @ phi_test.T) 
+            #print("Weights=", m_N)
             
 
             MSE_bayes = np.mean((mu_N_test - t_training)**2)
